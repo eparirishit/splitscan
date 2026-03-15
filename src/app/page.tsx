@@ -248,13 +248,14 @@ function BillSplitterFlow() {
           );
 
           if (historyResponse?.data && historyResponse.data.length > 0) {
-            // Map database records to history format
-            const mappedHistory = historyResponse.data.map(item => ({
+            // Map database records to history format (include created_at for monthly calc)
+            const mappedHistory = historyResponse.data.map((item: { id: string; store_name: string; date: string; total: number; source: string; created_at?: string }) => ({
               id: item.id,
               storeName: item.store_name,
               date: item.date,
               total: item.total,
-              source: item.source
+              source: item.source,
+              created_at: item.created_at
             }));
             setHistory(mappedHistory);
 
@@ -267,19 +268,22 @@ function BillSplitterFlow() {
           if (expenseCounts) {
             setAnalytics(expenseCounts);
           } else {
-            // Fallback to calculating from history if API fails
-            const fallbackHistory = historyResponse?.data || [];
+            // Fallback: fetch more history (up to 100) and compute when getUserExpenseCounts fails
+            const fallbackResponse = await AnalyticsClientService.getExpenseHistory(100, 0);
+            const fallbackHistory = fallbackResponse?.data || historyResponse?.data || [];
+            const now = new Date();
+            const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const norm = (s: string) => (s || '').toLowerCase();
+            const isCurrentMonth = (h: any) => {
+              const ts = h.created_at ?? h.date;
+              if (!ts) return false;
+              return String(ts).substring(0, 7) === currentMonthStr;
+            };
             setAnalytics({
-              totalVolume: fallbackHistory.reduce((sum: number, h: any) => sum + (h.total || 0), 0),
-              monthlyVolume: fallbackHistory
-                .filter((h: any) => {
-                  const d = new Date(h.date);
-                  const now = new Date();
-                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                })
-                .reduce((sum: number, h: any) => sum + (h.total || 0), 0),
-              scanCount: fallbackHistory.filter((h: any) => h.source === 'scan').length,
-              manualCount: fallbackHistory.filter((h: any) => h.source === 'manual').length
+              totalVolume: fallbackHistory.reduce((sum: number, h: any) => sum + (Number(h.total) || 0), 0),
+              monthlyVolume: fallbackHistory.filter(isCurrentMonth).reduce((sum: number, h: any) => sum + (Number(h.total) || 0), 0),
+              scanCount: fallbackHistory.filter((h: any) => norm(h.source) === 'scan').length,
+              manualCount: fallbackHistory.filter((h: any) => norm(h.source) === 'manual').length
             });
           }
           return;
@@ -295,18 +299,19 @@ function BillSplitterFlow() {
         const parsed = JSON.parse(savedHistory);
         // Limit to 5 items
         setHistory(parsed.slice(0, 5));
-        // Calculate analytics from localStorage
+        const now = new Date();
+        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const norm = (s: string) => (s || '').toLowerCase();
         setAnalytics({
-          totalVolume: parsed.reduce((sum: number, h: any) => sum + (h.total || 0), 0),
+          totalVolume: parsed.reduce((sum: number, h: any) => sum + (Number(h.total) || 0), 0),
           monthlyVolume: parsed
             .filter((h: any) => {
-              const d = new Date(h.date);
-              const now = new Date();
-              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+              if (!h.date) return false;
+              return String(h.date).substring(0, 7) === currentMonthStr;
             })
-            .reduce((sum: number, h: any) => sum + (h.total || 0), 0),
-          scanCount: parsed.filter((h: any) => h.source === AppFlow.SCAN || h.source === 'scan').length,
-          manualCount: parsed.filter((h: any) => h.source === AppFlow.MANUAL || h.source === 'manual').length
+            .reduce((sum: number, h: any) => sum + (Number(h.total) || 0), 0),
+          scanCount: parsed.filter((h: any) => norm(h.source) === 'scan').length,
+          manualCount: parsed.filter((h: any) => norm(h.source) === 'manual').length
         });
       }
     };

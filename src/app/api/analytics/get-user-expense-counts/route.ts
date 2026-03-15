@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
         // Get all expenses for the user to calculate counts
         const { data, error } = await supabase
             .from('expense_history')
-            .select('source, total, date')
+            .select('source, total, date, created_at')
             .eq('user_id', user.userId);
 
         if (error) {
@@ -25,17 +25,20 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Calculate counts and volumes
-        const scanCount = data?.filter(e => e.source === 'scan').length || 0;
-        const manualCount = data?.filter(e => e.source === 'manual').length || 0;
-        const totalVolume = data?.reduce((sum, e) => sum + (e.total || 0), 0) || 0;
+        // Calculate counts and volumes (source can be 'scan'/'manual' or 'SCAN'/'MANUAL')
+        const norm = (s: string) => (s || '').toLowerCase();
+        const scanCount = data?.filter(e => norm(e.source) === 'scan').length || 0;
+        const manualCount = data?.filter(e => norm(e.source) === 'manual').length || 0;
+        const totalVolume = data?.reduce((sum, e) => sum + (Number(e.total) || 0), 0) || 0;
 
-        // Calculate monthly volume
+        // Monthly volume: expenses created/synced this month (created_at is most reliable)
         const now = new Date();
+        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const monthlyVolume = data?.filter(e => {
-            const d = new Date(e.date);
-            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        }).reduce((sum, e) => sum + (e.total || 0), 0) || 0;
+            const ts = e.created_at ?? e.date;
+            if (!ts) return false;
+            return String(ts).substring(0, 7) === currentMonthStr;
+        }).reduce((sum, e) => sum + (Number(e.total) || 0), 0) || 0;
 
         return NextResponse.json({
             success: true,
