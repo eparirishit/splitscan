@@ -3,6 +3,8 @@ import { NextResponse, NextRequest } from 'next/server';
 import { AdminAuth } from '@/lib/admin-auth';
 import { getSupabaseClient } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
         // Require admin access
@@ -27,10 +29,12 @@ export async function GET(request: NextRequest) {
         const aggregatedData = await UserTrackingService.getAggregatedAnalytics(days);
 
         // 2. Calculate REAL Total Volume, Manual, and OCR from expense_history with filter
-        let expenseQuery = supabase.from('expense_history').select('total, source, date');
+        let expenseQuery = supabase.from('expense_history').select('total, source, date, created_at');
 
         if (startDate) {
-            expenseQuery = expenseQuery.gte('date', startDate.toISOString().split('T')[0]);
+            // Include expenses exactly on the start date
+            const formattedStartDate = startDate.toISOString();
+            expenseQuery = expenseQuery.gte('created_at', formattedStartDate);
         }
 
         const { data: expenseData, error: expenseError } = await expenseQuery;
@@ -40,12 +44,13 @@ export async function GET(request: NextRequest) {
         let scanCount = 0;
         
         if (!expenseError && expenseData) {
-            realTotalVolume = expenseData.reduce((sum, item) => sum + (item.total || 0), 0);
+            const norm = (s: string) => (s || '').toLowerCase();
+            realTotalVolume = expenseData.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
             // Count by source
             expenseData.forEach((item: any) => {
-                if (item.source === 'manual') {
+                if (norm(item.source) === 'manual') {
                     manualCount++;
-                } else if (item.source === 'scan') {
+                } else if (norm(item.source) === 'scan') {
                     scanCount++;
                 }
             });
