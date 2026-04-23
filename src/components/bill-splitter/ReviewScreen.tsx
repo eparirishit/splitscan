@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { BillData, User, Group } from '@/types';
+import { ExpenseCalculationService } from '@/services/expense-calculations';
 
 interface ReviewScreenProps {
   billData: BillData;
@@ -62,6 +63,10 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ billData, onUpdate, 
       splits[mId] += overhead / selectedMembers.length;
     });
   }
+
+  // Adjust for cent-level rounding so displayed amounts sum to the bill total exactly.
+  const memberIds = selectedMembers.map(m => m.id);
+  const adjustedSplits = ExpenseCalculationService.adjustSplitsForRounding(splits, memberIds, totalBill);
 
   const MULTIPLE_PAYERS_VALUE = '__multiple__';
 
@@ -134,7 +139,7 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ billData, onUpdate, 
 
     summary += `\n\nFinal Settlement Totals:\n`;
     selectedMembers.forEach(m => {
-      summary += `- ${m.name === 'Me' ? 'Your total' : m.name}: $${splits[m.id].toFixed(2)}\n`;
+      summary += `- ${m.name === 'Me' ? 'Your total' : m.name}: $${adjustedSplits[m.id].toFixed(2)}\n`;
     });
 
     onUpdate({ notes: summary });
@@ -264,7 +269,7 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ billData, onUpdate, 
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-base font-black text-primary tracking-tight">${splits[member.id].toFixed(2)}</span>
+                <span className="text-base font-black text-primary tracking-tight">${adjustedSplits[member.id].toFixed(2)}</span>
               </div>
             </div>
           ))}

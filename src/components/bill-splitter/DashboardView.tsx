@@ -278,7 +278,7 @@ export function DashboardView({
                                     <div className="flex-1 min-w-0 overflow-hidden">
                                         <p className="text-xs sm:text-sm font-bold text-foreground leading-tight truncate" title={item.storeName || 'Unnamed Split'}>{item.storeName || 'Unnamed Split'}</p>
                                         <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
-                                            <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-tighter whitespace-nowrap">{new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                                            <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-tighter whitespace-nowrap">{new Date(item.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                                             <span className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full bg-muted flex-shrink-0"></span>
                                             <span className="text-[8px] sm:text-[9px] font-bold text-primary uppercase tracking-tighter whitespace-nowrap">{item.source}</span>
                                         </div>

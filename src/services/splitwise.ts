@@ -191,6 +191,8 @@ export class SplitwiseService {
     description: string;
     group_id: number;
     split_equally: boolean;
+    /** Expense date as YYYY-MM-DD. Sent to Splitwise verbatim so the expense is recorded on the correct day. */
+    date?: string;
     users: Array<{ id: number; first_name: string; last_name: string }>;
     customAmounts?: Record<string, number>;
     /** Amount each user paid (userId -> amount). Sum should equal cost. If set, used for paid_share; else first user pays full. */
@@ -200,30 +202,47 @@ export class SplitwiseService {
       cost: expenseData.cost.toFixed(2),
       description: expenseData.description,
       group_id: expenseData.group_id,
-      split_equally: expenseData.split_equally
+      split_equally: expenseData.split_equally,
+      ...(expenseData.date && { date: expenseData.date }),
     };
 
     const paidShares = expenseData.paidShares;
 
     if (expenseData.split_equally) {
-      // Equal split - first user pays full amount, others pay 0 (or use paidShares if provided)
-      const sharePerUser = expenseData.cost / expenseData.users.length;
+      // Equal split: divide evenly, give the penny remainder to the last user.
+      const rawShare = expenseData.cost / expenseData.users.length;
+      let owedSoFar = 0;
 
       expenseData.users.forEach((user, index) => {
         payload[`users__${index}__user_id`] = user.id;
         const paid = paidShares ? (paidShares[user.id.toString()] ?? 0) : (index === 0 ? expenseData.cost : 0);
         payload[`users__${index}__paid_share`] = paid.toFixed(2);
-        payload[`users__${index}__owed_share`] = sharePerUser.toFixed(2);
+
+        const isLast = index === expenseData.users.length - 1;
+        const owedShare = isLast
+          ? Math.round((expenseData.cost - owedSoFar) * 100) / 100
+          : Math.round(rawShare * 100) / 100;
+        owedSoFar += owedShare;
+        payload[`users__${index}__owed_share`] = owedShare.toFixed(2);
       });
     } else {
-      // Custom split: owed from customAmounts, paid from paidShares or first user pays full
+      // Custom split: owed from customAmounts, paid from paidShares or first user pays full.
+      // Round all but the last user; assign the remainder to the last user so the
+      // sum of owed shares always equals the total cost exactly.
       const customAmounts = expenseData.customAmounts || {};
+      let owedSoFar = 0;
 
       expenseData.users.forEach((user, index) => {
         payload[`users__${index}__user_id`] = user.id;
         const paid = paidShares ? (paidShares[user.id.toString()] ?? 0) : (index === 0 ? expenseData.cost : 0);
         payload[`users__${index}__paid_share`] = paid.toFixed(2);
-        payload[`users__${index}__owed_share`] = (customAmounts[user.id.toString()] || 0).toFixed(2);
+
+        const isLast = index === expenseData.users.length - 1;
+        const owedShare = isLast
+          ? Math.round((expenseData.cost - owedSoFar) * 100) / 100
+          : Math.round((customAmounts[user.id.toString()] || 0) * 100) / 100;
+        owedSoFar += owedShare;
+        payload[`users__${index}__owed_share`] = owedShare.toFixed(2);
       });
     }
 

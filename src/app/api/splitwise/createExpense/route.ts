@@ -47,6 +47,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Splitwise returns HTTP 200 even on validation failures, with errors in the body.
+    // An expense that was not created will have no id, so we must check for this.
+    if (result.errors && Object.keys(result.errors).length > 0) {
+      const errorMessage = Object.values(result.errors as Record<string, string[]>)
+        .flat()
+        .join(', ');
+      return NextResponse.json(
+        { error: errorMessage || 'Splitwise rejected the expense' },
+        { status: 422 }
+      );
+    }
+
+    const expenseId = result?.expenses?.[0]?.id;
+    if (!expenseId) {
+      return NextResponse.json(
+        { error: 'Splitwise did not return a valid expense ID' },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error creating expense:', error);

@@ -145,6 +145,34 @@ export class ExpenseCalculationService {
     return amounts;
   }
 
+  /**
+   * Rounds each member's share to 2 decimal places and assigns any remaining
+   * cent-level difference to the last member in `memberIds`, so the sum of all
+   * shares always equals `total` exactly.
+   */
+  static adjustSplitsForRounding(
+    splits: Record<string, number>,
+    memberIds: string[],
+    total: number
+  ): Record<string, number> {
+    if (memberIds.length === 0) return splits;
+
+    const adjusted = { ...splits };
+    let owedSoFar = 0;
+
+    memberIds.forEach((id, index) => {
+      const isLast = index === memberIds.length - 1;
+      if (isLast) {
+        adjusted[id] = Math.round((total - owedSoFar) * 100) / 100;
+      } else {
+        adjusted[id] = Math.round((splits[id] ?? 0) * 100) / 100;
+        owedSoFar += adjusted[id];
+      }
+    });
+
+    return adjusted;
+  }
+
   static calculateFinalSplits(
     billData: ExtractReceiptDataOutput,
     itemSplits: ItemSplit[],

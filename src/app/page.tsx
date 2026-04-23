@@ -680,6 +680,7 @@ function BillSplitterFlow() {
         description: billData.storeName || "Bill Split",
         group_id: billData.groupId ? parseInt(billData.groupId) : 0,
         split_equally: false,
+        date: billData.date, // YYYY-MM-DD — preserve the user-selected expense date
         users: payloadUsers,
         customAmounts: splits,
         paidShares
@@ -770,6 +771,10 @@ function BillSplitterFlow() {
 
       const splitwiseResponse = await SplitwiseService.createExpense(formattedPayload);
       const splitwiseExpenseId = splitwiseResponse?.expenses?.[0]?.id?.toString() || null;
+
+      if (!splitwiseExpenseId) {
+        throw new Error('Splitwise did not return a valid expense ID. The expense may not have been created.');
+      }
 
       // Save or update to database if user is authenticated
       if (authUser?.id) {
