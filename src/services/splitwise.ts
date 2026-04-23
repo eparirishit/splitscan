@@ -206,7 +206,12 @@ export class SplitwiseService {
       ...(expenseData.date && { date: expenseData.date }),
     };
 
-    const paidShares = expenseData.paidShares;
+    // Normalise paidShares keys to strings so lookups always work regardless of
+    // whether the caller supplied numeric or string user IDs.
+    const rawPaidShares = expenseData.paidShares;
+    const paidShares: Record<string, number> | undefined = rawPaidShares
+      ? Object.fromEntries(Object.entries(rawPaidShares).map(([k, v]) => [String(k), v]))
+      : undefined;
 
     if (expenseData.split_equally) {
       // Equal split: divide evenly, give the penny remainder to the last user.
@@ -215,7 +220,7 @@ export class SplitwiseService {
 
       expenseData.users.forEach((user, index) => {
         payload[`users__${index}__user_id`] = user.id;
-        const paid = paidShares ? (paidShares[user.id.toString()] ?? 0) : (index === 0 ? expenseData.cost : 0);
+        const paid = paidShares ? (paidShares[String(user.id)] ?? 0) : (index === 0 ? expenseData.cost : 0);
         payload[`users__${index}__paid_share`] = paid.toFixed(2);
 
         const isLast = index === expenseData.users.length - 1;
@@ -234,16 +239,52 @@ export class SplitwiseService {
 
       expenseData.users.forEach((user, index) => {
         payload[`users__${index}__user_id`] = user.id;
-        const paid = paidShares ? (paidShares[user.id.toString()] ?? 0) : (index === 0 ? expenseData.cost : 0);
+        const paid = paidShares ? (paidShares[String(user.id)] ?? 0) : (index === 0 ? expenseData.cost : 0);
         payload[`users__${index}__paid_share`] = paid.toFixed(2);
 
         const isLast = index === expenseData.users.length - 1;
         const owedShare = isLast
           ? Math.round((expenseData.cost - owedSoFar) * 100) / 100
-          : Math.round((customAmounts[user.id.toString()] || 0) * 100) / 100;
+          : Math.round((customAmounts[String(user.id)] || 0) * 100) / 100;
         owedSoFar += owedShare;
         payload[`users__${index}__owed_share`] = owedShare.toFixed(2);
       });
+    }
+
+    // Safety net: if the total paid_share still doesn't equal the cost (e.g. a
+    // payer ID in paidShares didn't match any user after normalisation), find the
+    // intended payer and top up their paid_share by the unpaid remainder only —
+    // never overwrite a partial share that was already correctly assigned.
+    const totalPaid = expenseData.users.reduce((sum, _, index) => {
+      return sum + parseFloat((payload[`users__${index}__paid_share`] as string) || '0');
+    }, 0);
+
+    const unpaidRemainder = Math.round((expenseData.cost - totalPaid) * 100) / 100;
+
+    if (expenseData.users.length > 0 && Math.abs(unpaidRemainder) > 0.01) {
+      // Find the intended payer by matching paidShares keys against the users list.
+      // Prefer a payer whose share was NOT already assigned (paid_share == 0).
+      const payerIndex = paidShares
+        ? expenseData.users.findIndex(u => {
+            const key = String(u.id);
+            return (key in paidShares) &&
+                   parseFloat((payload[`users__${expenseData.users.indexOf(u)}__paid_share`] as string) || '0') === 0;
+          })
+        : -1;
+      // Fall back to any user that appears in paidShares, then to index 0.
+      const fallbackIndex = paidShares
+        ? expenseData.users.findIndex(u => String(u.id) in paidShares)
+        : -1;
+      const targetIndex = payerIndex !== -1 ? payerIndex : fallbackIndex !== -1 ? fallbackIndex : 0;
+
+      const existing = parseFloat((payload[`users__${targetIndex}__paid_share`] as string) || '0');
+      const corrected = Math.round((existing + unpaidRemainder) * 100) / 100;
+
+      console.warn(
+        `[formatExpensePayload] Paid share total (${totalPaid}) ≠ cost (${expenseData.cost}). ` +
+        `Adding remainder ${unpaidRemainder} to user at index ${targetIndex} (id: ${expenseData.users[targetIndex]?.id}).`
+      );
+      payload[`users__${targetIndex}__paid_share`] = corrected.toFixed(2);
     }
 
     return payload as CreateExpense;

@@ -263,7 +263,7 @@ export function DashboardView({
                         <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Recent Activity</h3>
                     </div>
                     <div className="bg-card text-card-foreground rounded-[2.5rem] border border-primary/10 overflow-hidden shadow-xl shadow-primary/5">
-                        {history.slice(0, 4).map((item, idx) => (
+                        {history.slice(0, 5).map((item, idx) => (
                             <div
                                 key={item.id + idx}
                                 className="group p-3 sm:p-4 bg-transparent hover:bg-accent flex items-center justify-between transition-all border-b border-border last:border-none"

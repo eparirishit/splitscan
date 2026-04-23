@@ -241,9 +241,8 @@ function BillSplitterFlow() {
       // Try to load from database if authenticated
       if (isAuthenticated && authUser?.id) {
         try {
-          // Load history (last 5 items)
           const historyResponse = await AnalyticsClientService.getExpenseHistory(
-            5, // Limit to last 5 transactions
+            5,
             0
           );
 
@@ -652,13 +651,10 @@ function BillSplitterFlow() {
       // expense-payload.ts logic expects "users" array and "customAmounts" map.
 
       const payloadUsers = uniqueMembers.map(m => ({
-        id: parseInt(m.id), // Splitwise IDs are numbers usually, but our interface uses strings. Ensure safe conversion.
+        id: parseInt(m.id),
         first_name: m.name.split(' ')[0],
         last_name: m.name.split(' ').slice(1).join(' ')
       }));
-
-      // Ensure currentUser is in the list if not already (for payer logic)
-      // Assuming existing service handles "user owes 0/paid full" correctly if passed in users list.
 
       // Build paid shares: multiple payers from payerShares, or single payer from payerId
       let paidShares: Record<string, number>;
@@ -667,12 +663,35 @@ function BillSplitterFlow() {
         if (Math.abs(sumPaid - totalAmount) < 0.02) {
           paidShares = billData.payerShares;
         } else {
-          const fallbackPayerId = billData.payerId || authUser?.id || uniqueMembers[0]?.id;
+          const fallbackPayerId = billData.payerId || uniqueMembers[0]?.id;
           paidShares = fallbackPayerId ? { [fallbackPayerId]: totalAmount } : {};
         }
       } else {
-        const singlePayerId = (billData.payerId && billData.payerId !== '__multiple__') ? billData.payerId : (authUser?.id || uniqueMembers[0]?.id);
-        paidShares = singlePayerId ? { [singlePayerId]: totalAmount } : (uniqueMembers[0] ? { [uniqueMembers[0].id]: totalAmount } : {});
+        const singlePayerId = (billData.payerId && billData.payerId !== '__multiple__') ? billData.payerId : uniqueMembers[0]?.id;
+        paidShares = singlePayerId ? { [singlePayerId]: totalAmount } : {};
+      }
+
+      // A payer may be a group member who is not part of the split (owed_share = 0).
+      // Splitwise requires them to be present in the users list with paid_share = total
+      // and owed_share = 0. Find any such payers and inject them into payloadUsers.
+      const allKnownUsers = [...friends, ...groups.flatMap(g => g.members)];
+      const payloadUserIds = new Set(payloadUsers.map(u => u.id.toString()));
+      const customAmountsWithPayers = { ...splits };
+
+      for (const payerIdStr of Object.keys(paidShares)) {
+        if (!payloadUserIds.has(payerIdStr)) {
+          // u.id may be a number at runtime (Splitwise API), so coerce both sides
+          const payerInfo = allKnownUsers.find(u => String(u.id) === payerIdStr);
+          if (payerInfo) {
+            payloadUsers.push({
+              id: parseInt(payerIdStr),
+              first_name: payerInfo.name.split(' ')[0],
+              last_name: payerInfo.name.split(' ').slice(1).join(' ')
+            });
+            // Payer is not in the split — they owe nothing
+            customAmountsWithPayers[payerIdStr] = 0;
+          }
+        }
       }
 
       const expenseData = {
@@ -682,7 +701,7 @@ function BillSplitterFlow() {
         split_equally: false,
         date: billData.date, // YYYY-MM-DD — preserve the user-selected expense date
         users: payloadUsers,
-        customAmounts: splits,
+        customAmounts: customAmountsWithPayers,
         paidShares
       };
 
