@@ -36,6 +36,22 @@ interface User {
   last_signin: string;
 }
 
+const formatRelativeTime = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '—';
+  const diffMs = Date.now() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60_000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays}d ago`;
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths}mo ago`;
+  return `${Math.floor(diffMonths / 12)}y ago`;
+};
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({ history, onBack }) => {
   const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'feedback' | 'support'>('stats');
   const [feedbackLogs, setFeedbackLogs] = useState<FeedbackLog[]>([]);
@@ -528,8 +544,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ history, onBack }) => {
                       />
                       <div>
                         <p className="text-sm font-bold leading-tight">{user.name}</p>
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter mt-1">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter mt-0.5">
                           Joined: {user.joinedDate} • {user.total_receipts_processed} receipts
+                        </p>
+                        <p className="text-[9px] font-bold text-primary/70 uppercase tracking-tighter mt-0.5">
+                          Last active: {formatRelativeTime(user.last_signin)}
                         </p>
                       </div>
                     </div>
