@@ -29,6 +29,7 @@ interface DashboardViewProps {
     history: HistoryItem[];
     drafts?: any[]; // FlowStateSnapshot[]
     savedFlowState?: any; // FlowStateSnapshot | null
+    isLoading?: boolean;
     onProfileClick: () => void;
     onAdminClick?: () => void;
     onScanClick: () => void;
@@ -47,6 +48,7 @@ export function DashboardView({
     history,
     drafts = [],
     savedFlowState,
+    isLoading = false,
     onProfileClick,
     onAdminClick,
     onScanClick,
@@ -164,39 +166,53 @@ export function DashboardView({
                 <div className="flex items-center justify-between mb-4 px-1">
                     <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Dashboard Analytics</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-card text-card-foreground p-6 rounded-[2.5rem] border border-primary/10 shadow-xl shadow-primary/5">
-                        <div className="flex justify-between items-start mb-1">
-                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Spent</p>
-                            <i className="fas fa-coins text-amber-500 text-[10px]"></i>
-                        </div>
-                        <p className="text-xl font-black tracking-tighter">${analytics.totalVolume.toFixed(0)}</p>
+                {isLoading ? (
+                    <div className="grid grid-cols-2 gap-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="bg-card p-6 rounded-[2.5rem] border border-primary/10 shadow-xl shadow-primary/5 space-y-3">
+                                <div className="flex justify-between items-start">
+                                    <div className="h-2 w-14 bg-muted animate-pulse rounded-full" />
+                                    <div className="h-3 w-3 bg-muted animate-pulse rounded-full" />
+                                </div>
+                                <div className="h-6 w-16 bg-muted animate-pulse rounded-lg" />
+                            </div>
+                        ))}
                     </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-card text-card-foreground p-6 rounded-[2.5rem] border border-primary/10 shadow-xl shadow-primary/5">
+                            <div className="flex justify-between items-start mb-1">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Spent</p>
+                                <i className="fas fa-coins text-amber-500 text-[10px]"></i>
+                            </div>
+                            <p className="text-xl font-black tracking-tighter">${analytics.totalVolume.toFixed(0)}</p>
+                        </div>
 
-                    <div className="bg-card text-card-foreground p-6 rounded-[2.5rem] border border-primary/10 shadow-xl shadow-primary/5">
-                        <div className="flex justify-between items-start mb-1">
-                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Monthly</p>
-                            <i className="fas fa-calendar-alt text-primary text-[10px]"></i>
+                        <div className="bg-card text-card-foreground p-6 rounded-[2.5rem] border border-primary/10 shadow-xl shadow-primary/5">
+                            <div className="flex justify-between items-start mb-1">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Monthly</p>
+                                <i className="fas fa-calendar-alt text-primary text-[10px]"></i>
+                            </div>
+                            <p className="text-xl font-black tracking-tighter">${analytics.monthlyVolume.toFixed(0)}</p>
                         </div>
-                        <p className="text-xl font-black tracking-tighter">${analytics.monthlyVolume.toFixed(0)}</p>
-                    </div>
 
-                    <div className="bg-card text-card-foreground p-6 rounded-[2.5rem] border border-primary/10 shadow-xl shadow-primary/5">
-                        <div className="flex justify-between items-start mb-1">
-                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">OCR Scans</p>
-                            <i className="fas fa-camera text-emerald-500 text-[10px]"></i>
+                        <div className="bg-card text-card-foreground p-6 rounded-[2.5rem] border border-primary/10 shadow-xl shadow-primary/5">
+                            <div className="flex justify-between items-start mb-1">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">OCR Scans</p>
+                                <i className="fas fa-camera text-emerald-500 text-[10px]"></i>
+                            </div>
+                            <p className="text-xl font-black tracking-tighter">{analytics.scanCount}</p>
                         </div>
-                        <p className="text-xl font-black tracking-tighter">{analytics.scanCount}</p>
-                    </div>
 
-                    <div className="bg-card text-card-foreground p-6 rounded-[2.5rem] border border-primary/10 shadow-xl shadow-primary/5">
-                        <div className="flex justify-between items-start mb-1">
-                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Manual</p>
-                            <i className="fas fa-keyboard text-purple-500 text-[10px]"></i>
+                        <div className="bg-card text-card-foreground p-6 rounded-[2.5rem] border border-primary/10 shadow-xl shadow-primary/5">
+                            <div className="flex justify-between items-start mb-1">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Manual</p>
+                                <i className="fas fa-keyboard text-purple-500 text-[10px]"></i>
+                            </div>
+                            <p className="text-xl font-black tracking-tighter">{analytics.manualCount}</p>
                         </div>
-                        <p className="text-xl font-black tracking-tighter">{analytics.manualCount}</p>
                     </div>
-                </div>
+                )}
             </section>
 
             {/* Unfinished Drafts */}
@@ -257,11 +273,30 @@ export function DashboardView({
             )}
 
             {/* Recent Activity */}
-            {history.length > 0 && (
+            {(isLoading || history.length > 0) && (
                 <section className="mt-2">
                     <div className="flex items-center justify-between mb-4 px-1">
                         <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Recent Activity</h3>
                     </div>
+                    {isLoading ? (
+                        <div className="bg-card rounded-[2.5rem] border border-primary/10 overflow-hidden shadow-xl shadow-primary/5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <div key={i} className="p-3 sm:p-4 flex items-center justify-between border-b border-border last:border-none">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-muted animate-pulse shrink-0" />
+                                        <div className="space-y-2">
+                                            <div className="h-3 w-28 bg-muted animate-pulse rounded-full" />
+                                            <div className="h-2 w-20 bg-muted animate-pulse rounded-full" />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-5 w-14 bg-muted animate-pulse rounded-lg" />
+                                        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-muted animate-pulse rounded-lg" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
                     <div className="bg-card text-card-foreground rounded-[2.5rem] border border-primary/10 overflow-hidden shadow-xl shadow-primary/5">
                         {history.slice(0, 5).map((item, idx) => (
                             <div
@@ -302,6 +337,7 @@ export function DashboardView({
                             </div>
                         ))}
                     </div>
+                    )}
                 </section>
             )}
         </div>

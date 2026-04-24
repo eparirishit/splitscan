@@ -1165,6 +1165,7 @@ function BillSplitterFlow() {
                 greeting={getGreeting()}
                 analytics={analytics}
                 history={history}
+                isLoading={isLoadingData}
                 onProfileClick={() => setShowProfile(true)}
                 onScanClick={() => {
                   setFlow(AppFlow.SCAN);
