@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { BillData } from '@/types';
 import { AnalyticsClientService } from '@/services/analytics-client';
 import { Loader2, X, Shield, TrendingUp, Users, MessageSquare, LifeBuoy, ArrowLeft, Clock, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
-import { Logo } from '@/components/icons/logo';
 import { UserAnalytics } from '@/types/analytics';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -304,9 +303,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ history, onBack }) => {
       {activeTab === 'stats' && (
         <>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-              <Logo className="w-16 h-16 animate-pulse" />
-              <p className="text-sm text-muted-foreground">Loading stats...</p>
+            <div className="grid grid-cols-2 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-card rounded-[2.5rem] border border-border p-6 shadow-sm space-y-3">
+                  <div className="h-2.5 w-20 bg-muted animate-pulse rounded-full" />
+                  <div className="h-7 w-16 bg-muted animate-pulse rounded-lg" />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
@@ -398,9 +401,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ history, onBack }) => {
 
           {/* User Analytics */}
           {isLoadingUserAnalytics ? (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-              <Logo className="w-16 h-16 animate-pulse" />
-              <p className="text-sm text-muted-foreground">Loading analytics...</p>
+            <div className="space-y-4">
+              {/* 2×2 stat cards */}
+              <div className="grid grid-cols-2 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-card rounded-[2.5rem] border border-border p-6 shadow-sm space-y-3">
+                    <div className="h-2.5 w-24 bg-muted animate-pulse rounded-full" />
+                    <div className="h-7 w-12 bg-muted animate-pulse rounded-lg" />
+                  </div>
+                ))}
+              </div>
+              {/* Activity card */}
+              <div className="bg-card rounded-[2.5rem] border border-border p-6 shadow-sm space-y-4">
+                <div className="h-3 w-16 bg-muted animate-pulse rounded-full" />
+                <div className="space-y-3">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-4 h-4 rounded-full bg-muted animate-pulse shrink-0" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-2 w-16 bg-muted animate-pulse rounded-full" />
+                        <div className="h-3 w-36 bg-muted animate-pulse rounded-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Performance card */}
+              <div className="bg-card rounded-[2.5rem] border border-border p-6 shadow-sm space-y-4">
+                <div className="h-3 w-20 bg-muted animate-pulse rounded-full" />
+                <div className="grid grid-cols-2 gap-4">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="h-2 w-24 bg-muted animate-pulse rounded-full" />
+                      <div className="h-5 w-14 bg-muted animate-pulse rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : userAnalytics ? (
             <div className="space-y-4">
@@ -509,9 +546,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ history, onBack }) => {
       ) : activeTab === 'users' && (
         <>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-              <Logo className="w-16 h-16 animate-pulse" />
-              <p className="text-sm text-muted-foreground">Loading users...</p>
+            <div className="bg-card rounded-[2.5rem] border border-border overflow-hidden shadow-sm">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-5 flex items-center justify-between border-b border-border last:border-none">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-muted animate-pulse shrink-0" />
+                    <div className="space-y-2">
+                      <div className="h-3 w-28 bg-muted animate-pulse rounded-full" />
+                      <div className="h-2 w-40 bg-muted animate-pulse rounded-full" />
+                      <div className="h-2 w-24 bg-muted animate-pulse rounded-full" />
+                    </div>
+                  </div>
+                  <div className="h-5 w-12 bg-muted animate-pulse rounded-full" />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="bg-card text-card-foreground rounded-[2.5rem] border border-border overflow-hidden shadow-sm">
@@ -571,9 +619,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ history, onBack }) => {
       {activeTab === 'feedback' && (
         <>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-              <Logo className="w-16 h-16 animate-pulse" />
-              <p className="text-sm text-muted-foreground">Loading feedback...</p>
+            <div className="bg-card rounded-[2.5rem] border border-border overflow-hidden shadow-sm">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-5 flex items-center gap-4 border-b border-border last:border-none">
+                  <div className="w-8 h-8 rounded-full bg-muted animate-pulse shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-3 w-32 bg-muted animate-pulse rounded-full" />
+                    <div className="h-2 w-48 bg-muted animate-pulse rounded-full" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-4">
@@ -612,9 +667,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ history, onBack }) => {
       {activeTab === 'support' && (
         <>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-              <Logo className="w-16 h-16 animate-pulse" />
-              <p className="text-sm text-muted-foreground">Loading support requests...</p>
+            <div className="bg-card rounded-[2.5rem] border border-border overflow-hidden shadow-sm">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-5 border-b border-border last:border-none space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-5 w-12 bg-muted animate-pulse rounded-lg" />
+                      <div className="h-5 w-16 bg-muted animate-pulse rounded-lg" />
+                    </div>
+                    <div className="h-2 w-16 bg-muted animate-pulse rounded-full" />
+                  </div>
+                  <div className="h-3 w-3/4 bg-muted animate-pulse rounded-full" />
+                  <div className="h-2 w-24 bg-muted animate-pulse rounded-full" />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-4">
